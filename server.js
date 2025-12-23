@@ -27,9 +27,10 @@ app.use(
   })
 );
 
-// Security headers
+// ✅ FIX: Disable Helmet's contentSecurityPolicy for Vercel
 app.use(
   helmet({
+    contentSecurityPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
@@ -43,33 +44,23 @@ if (process.env.NODE_ENV !== "production") {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
-  message: "Too many requests from this IP, please try again later.",
-});
-
-// ✅ ROOT ROUTE HANDLER - Using middleware pattern
-app.use((req, res, next) => {
-  if (req.path === "/" && req.method === "GET") {
-    return res.status(200).json({
-      success: true,
-      message: "API is running",
-      version: "1.0.0",
-      endpoints: {
-        health: "/health",
-        api: "/api",
-        testCors: "/api/test-cors",
-        users: "/api/users",
-        categories: "/api/categories",
-        products: "/api/products",
-        orders: "/api/orders",
-      },
-      timestamp: new Date().toISOString(),
-    });
-  }
-  next();
+// ✅ FIX: Change from middleware to direct route handler
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "API is running",
+    version: "1.0.0",
+    endpoints: {
+      health: "/health",
+      api: "/api",
+      testCors: "/api/test-cors",
+      users: "/api/users",
+      categories: "/api/categories",
+      products: "/api/products",
+      orders: "/api/orders",
+    },
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Health check
@@ -91,6 +82,13 @@ app.get("/api/test-cors", (req, res) => {
     origin: req.headers.origin,
     timestamp: new Date().toISOString(),
   });
+});
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+  message: "Too many requests from this IP, please try again later.",
 });
 
 // Apply rate limiting and routes
