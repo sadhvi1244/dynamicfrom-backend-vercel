@@ -15,7 +15,25 @@ import routes from "./routes/index.js";
 const app = express();
 
 // Connect to MongoDB
-connectDB();
+// connectDB();
+// ✅ Vercel-safe MongoDB connection
+let isConnected = false;
+
+app.use(async (req, res, next) => {
+  if (isConnected) return next();
+
+  try {
+    await connectDB();
+    isConnected = true;
+    next();
+  } catch (err) {
+    console.error("❌ MongoDB connection failed:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+    });
+  }
+});
 
 // Rate limiting
 const limiter = rateLimit({
