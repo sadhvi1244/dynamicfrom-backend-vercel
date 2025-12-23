@@ -50,14 +50,11 @@ if (process.env.NODE_ENV !== "production") {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Apply rate limiting
-app.use("/api", limiter);
+// ===== ROUTES START HERE - ORDER MATTERS! =====
 
-// API routes
-app.use("/api", routes);
-
-// ✅ Root endpoint
+// 1. Root route FIRST (before everything)
 app.get("/", (req, res) => {
+  console.log("Root route hit!");
   res.status(200).json({
     success: true,
     message: "API is running",
@@ -71,7 +68,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// Health check
+// 2. Health check
 app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
@@ -82,7 +79,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Test CORS endpoint
+// 3. Test CORS (specific route before /api)
 app.get("/api/test-cors", (req, res) => {
   res.status(200).json({
     success: true,
@@ -92,16 +89,23 @@ app.get("/api/test-cors", (req, res) => {
   });
 });
 
-// 404 handler
+// 4. Rate limiting for /api routes
+app.use("/api", limiter);
+
+// 5. API routes (after specific routes)
+app.use("/api", routes);
+
+// 6. 404 handler (second to last)
 app.use((req, res) => {
+  console.log("404 hit for:", req.method, req.originalUrl);
   res.status(404).json({
     success: false,
     message: `Cannot ${req.method} ${req.originalUrl}`,
   });
 });
 
-// Global error handler
+// 7. Error handler (absolute last)
 app.use(errorHandler);
 
-// ✅ Export for Vercel (no app.listen)
+// Export for Vercel
 export default app;
