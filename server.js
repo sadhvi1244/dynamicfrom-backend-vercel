@@ -16,11 +16,12 @@ connectDB().catch((err) => {
 
 // CORS configuration
 const frontendUrl =
-  process.env.FRONTEND_URL?.replace(/\/$/, "") || "http://localhost:5173";
+  process.env.FRONTEND_URL?.replace(/\/$/, "") ||
+  "https://form-sadhvi.vercel.app";
 
 app.use(
   cors({
-    origin: [frontendUrl, "http://localhost:5173"],
+    origin: [frontendUrl, "https://form-sadhvi.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
