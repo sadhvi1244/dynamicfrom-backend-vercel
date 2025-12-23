@@ -1,5 +1,6 @@
-import dotenv from "dotenv";
-dotenv.config();
+// ❌ DO NOT use dotenv on Vercel (use Dashboard env vars)
+// import dotenv from "dotenv";
+// dotenv.config();
 
 import express from "express";
 import cors from "cors";
@@ -29,7 +30,7 @@ const frontendUrl =
 
 app.use(
   cors({
-    origin: [frontendUrl, "http://localhost:5173"],
+    origin: [frontendUrl],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -43,12 +44,12 @@ app.use(
   })
 );
 
-// Logging in development
+// Logging only in development
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-// Body parser (increase limit)
+// Body parser
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -63,10 +64,9 @@ app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Server is running",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
     environment: process.env.NODE_ENV,
-    frontendUrl: frontendUrl,
+    frontendUrl,
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -91,32 +91,7 @@ app.use((req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-// Start server
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(
-    `🚀 Server running in ${
-      process.env.NODE_ENV || "development"
-    } mode on port ${PORT}`
-  );
-  console.log(`📡 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
-  console.log(`🌐 CORS allowed for: ${frontendUrl}`);
-});
-
-// Handle unhandled promise rejections
-process.on("unhandledRejection", (err) => {
-  console.error(`❌ Unhandled Rejection: ${err.message}`);
-  console.error(err.stack);
-
-  server.close(() => process.exit(1));
-});
-
-// Handle uncaught exceptions
-process.on("uncaughtException", (err) => {
-  console.error(`❌ Uncaught Exception: ${err.message}`);
-  console.error(err.stack);
-  process.exit(1);
-});
-
+// ✅ IMPORTANT FOR VERCEL
+// ❌ DO NOT call app.listen()
+// ✅ Just export the app
 export default app;
