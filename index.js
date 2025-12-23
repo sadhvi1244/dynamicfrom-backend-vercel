@@ -1,7 +1,3 @@
-// ❌ DO NOT use dotenv on Vercel (use Dashboard env vars)
-// import dotenv from "dotenv";
-// dotenv.config();
-
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -11,33 +7,16 @@ import connectDB from "./config/database.js";
 import errorHandler from "./middleware/errorHandler.js";
 import routes from "./routes/index.js";
 
-// Initialize express app
 const app = express();
 
 // Connect to MongoDB
-// connectDB();
-// ✅ Vercel-safe MongoDB connection
-let isConnected = false;
-
-app.use(async (req, res, next) => {
-  if (isConnected) return next();
-
-  try {
-    await connectDB();
-    isConnected = true;
-    next();
-  } catch (err) {
-    console.error("❌ MongoDB connection failed:", err.message);
-    return res.status(500).json({
-      success: false,
-      message: "Database connection failed",
-    });
-  }
+connectDB().catch((err) => {
+  console.error("MongoDB connection error:", err);
 });
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 mins
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
   message: "Too many requests from this IP, please try again later.",
 });
@@ -48,7 +27,7 @@ const frontendUrl =
 
 app.use(
   cors({
-    origin: [frontendUrl],
+    origin: [frontendUrl, "http://localhost:5173"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -62,8 +41,8 @@ app.use(
   })
 );
 
-// Logging only in development
-if (process.env.NODE_ENV === "development") {
+// Logging
+if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
@@ -71,18 +50,33 @@ if (process.env.NODE_ENV === "development") {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Apply rate limiting to all /api routes
+// Apply rate limiting
 app.use("/api", limiter);
 
 // API routes
 app.use("/api", routes);
+
+// ✅ Root endpoint
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "API is running",
+    version: "1.0.0",
+    endpoints: {
+      health: "/health",
+      api: "/api",
+      testCors: "/api/test-cors",
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Health check
 app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Server is running",
-    environment: process.env.NODE_ENV,
+    environment: process.env.NODE_ENV || "production",
     frontendUrl,
     timestamp: new Date().toISOString(),
   });
@@ -109,7 +103,5 @@ app.use((req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-// ✅ IMPORTANT FOR VERCEL
-// ❌ DO NOT call app.listen()
-// ✅ Just export the app
+// ✅ Export for Vercel (no app.listen)
 export default app;
